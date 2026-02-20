@@ -11,11 +11,296 @@ public class IntermediateProblems {
 
         backpressureExample();
         chatMessageLogger();
+        stockPriceTicker();
+        videoFrameProcessor();
+        iotWaterLevelMonitor();
+        parallelSquareCalculator();
+        singleSchedulerExample();
+        immediateExecutionLogger();
+        simulatedApiCallWithErrorHandling();
+        errorContinueExample();
+        flakyApiCalls();
+        hotVsCold();
     }
 
-    private static void chatMessageLogger() {
+    private static void hotVsCold() throws InterruptedException {
 
-        
+        System.out.println("=== Cold Publisher ===");
+
+        // Cold Flux: emits every 500ms
+        Flux<Long> coldSensor = Flux.interval(Duration.ofMillis(500))
+                .take(5); // only 5 readings
+
+        // Subscriber A subscribes immediately
+        coldSensor.subscribe(i -> System.out.println("[Cold Subscriber A] Reading: " + i));
+
+        // Subscriber B subscribes after 1 second
+        Thread.sleep(1000);
+        coldSensor.subscribe(i -> System.out.println("[Cold Subscriber B] Reading: " + i));
+
+        Thread.sleep(3500); // wait for cold flux to complete
+
+        System.out.println("\n=== Hot Publisher ===");
+
+        // Hot Flux: shared emissions
+        Flux<Long> hotSensor = Flux.interval(Duration.ofMillis(500))
+                .take(5)
+                .publish()       // make it hot
+                .refCount(1);   // start emitting when first subscriber connects
+
+        // Subscriber C subscribes immediately
+        hotSensor.subscribe(i -> System.out.println("[Hot Subscriber C] Reading: " + i));
+
+        // Subscriber D subscribes after 1 second
+        Thread.sleep(1000);
+        hotSensor.subscribe(i -> System.out.println("[Hot Subscriber D] Reading: " + i));
+
+        Thread.sleep(3000); // wait for hot flux to complete
+    }
+
+    private static void flakyApiCalls() {
+
+        Flux<String> userFlux = Flux.range(1, 5)
+                .map(id -> {
+                    if (id == 3) {
+                        throw new RuntimeException("API failure for user " + id);
+                    }
+                    return "User " + id;
+                })
+                .doOnNext(user -> System.out.println("[Upstream] Processing: " + user))
+                // Use onErrorResume to switch to a fallback Flux
+                .onErrorResume(e -> {
+                    System.out.println("[Error] Caught: " + e.getMessage() + " → switching to fallback");
+                    return Flux.just("Fallback User 3A", "Fallback User 3B");
+                })
+                // Log downstream emissions
+                .doOnNext(user -> System.out.println("[Downstream] Produced: " + user));
+
+        userFlux.subscribe(
+                user -> System.out.println("[Subscriber] Received: " + user),
+                err -> System.err.println("[Subscriber] Error: " + err),
+                () -> System.out.println("[Subscriber] Completed!")
+        );
+    }
+
+    private static void errorContinueExample() {
+
+        Flux<Integer> sensorFlux = Flux.range(1, 6)
+                .map(reading -> {
+                    if (reading == 3) {
+                        throw new RuntimeException("Sensor failure at reading " + reading);
+                    }
+                    return reading * 10; // Simulate temperature processing
+                })
+                .doOnNext(reading -> System.out.println("[Upstream] Reading: " + reading))
+                // Skip failed items and continue
+                .onErrorContinue((throwable, reading) ->
+                        System.out.println("[Error] Skipping reading " + reading + " due to: " + throwable.getMessage())
+                );
+
+        sensorFlux.subscribe(
+                reading -> System.out.println("[Subscriber] Received: " + reading),
+                err -> System.err.println("[Subscriber] Error: " + err),
+                () -> System.out.println("[Subscriber] Completed!")
+        );
+    }
+
+    private static void simulatedApiCallWithErrorHandling() {
+
+        Flux<String> userFlux = Flux.range(1, 6)
+                .map(id -> {
+                    if (id == 4) {
+                        throw new RuntimeException("Failed to fetch user " + id);
+                    }
+                    return "User " + id;
+                })
+                .doOnNext(user -> System.out.println("[Upstream] " + user))
+                // Handle error by returning a single default value
+                .onErrorReturn("Unknown User")
+                // Alternative: handle error by switching to another Flux
+                //.onErrorResume(e -> Flux.just("Fallback User 1", "Fallback User 2"))
+                ;
+
+        userFlux.subscribe(
+                user -> System.out.println("[Subscriber] Received: " + user),
+                err -> System.err.println("[Subscriber] Error: " + err),
+                () -> System.out.println("[Subscriber] Completed!")
+        );
+    }
+
+    private static void immediateExecutionLogger() {
+
+        Flux.range(1, 5)
+                // Log upstream emission
+                .doOnNext(n -> System.out.println("[Upstream] Number: " + n + " | Thread: " + Thread.currentThread().getName()))
+                // Use immediate scheduler (no thread switch)
+                .publishOn(Schedulers.immediate())
+                // Map to processed string
+                .map(n -> "Processed " + n)
+                // Log downstream processing
+                .doOnNext(s -> System.out.println("[Downstream] " + s + " | Thread: " + Thread.currentThread().getName()))
+                // Subscribe and print results
+                .subscribe(result -> System.out.println("[Subscriber] Received: " + result + " | Thread: " + Thread.currentThread().getName()));
+
+    }
+
+    private static void singleSchedulerExample() throws InterruptedException {
+
+
+        Flux.range(1, 5)
+                // Log upstream emission
+                .doOnNext(n -> System.out.println("[Upstream] Number: " + n + " | Thread: " + Thread.currentThread().getName()))
+                // Switch downstream execution to single scheduler
+                .publishOn(Schedulers.single())
+                // Map each number to a processed string
+                .map(n -> "Task " + n + " processed")
+                // Log downstream processing
+                .doOnNext(task -> System.out.println("[Downstream] " + task + " | Thread: " + Thread.currentThread().getName()))
+                // Subscribe and print results
+                .subscribe(result -> System.out.println("[Subscriber] Received: " + result + " | Thread: " + Thread.currentThread().getName()));
+
+        // Keep main thread alive for processing
+        Thread.sleep(2000);
+    }
+
+    private static void parallelSquareCalculator() throws InterruptedException {
+
+        Flux.range(1, 6)
+                // Log numbers upstream before scheduling
+                .doOnNext(n -> System.out.println("[Upstream] Number: " + n + " | Thread: " + Thread.currentThread().getName()))
+                // Switch downstream execution to parallel scheduler
+                .publishOn(Schedulers.parallel())
+                // Calculate square downstream
+                .map(n -> n * n)
+                // Log squared numbers with thread name
+                .doOnNext(squared -> System.out.println("[Downstream] Squared: " + squared + " | Thread: " + Thread.currentThread().getName()))
+                // Subscribe and print results
+                .subscribe(result -> System.out.println("[Subscriber] Received: " + result + " | Thread: " + Thread.currentThread().getName()));
+
+        // Keep main thread alive long enough for all processing
+        Thread.sleep(2000);
+    }
+
+    private static void iotWaterLevelMonitor() throws InterruptedException {
+
+        // Simulate fast upstream of water level readings
+        Flux<Integer> waterLevelFlux = Flux.range(50, 12) // 50..61
+                .delayElements(Duration.ofMillis(40)) // fast upstream: emits every 40ms
+                .doOnNext(level -> System.out.println("[Upstream emitted] " + level))
+                // Drop readings if subscriber is slow
+                .onBackpressureDrop(droppedLevel -> System.out.println("[Dropped due to backpressure] " + droppedLevel));
+
+        // Slow subscriber: processes each reading every 120ms
+        waterLevelFlux
+                .publishOn(Schedulers.boundedElastic()) // subscriber runs on separate thread
+                .subscribe(
+                        level -> {
+                            System.out.println("[Subscriber received] " + level);
+                            try {
+                                Thread.sleep(120); // simulate slow processing
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
+                        },
+                        err -> System.err.println("Error: " + err),
+                        () -> System.out.println("All water level readings processed!")
+                );
+
+        // Keep main thread alive long enough for processing
+        Thread.sleep(5000);
+    }
+
+    private static void videoFrameProcessor() throws InterruptedException {
+
+        // Simulate a fast upstream of video frames
+        Flux<String> frameFlux = Flux.range(1, 15)
+                .map(i -> "Frame " + i)
+                .delayElements(Duration.ofMillis(30)) // fast upstream: emits every 30ms
+                .doOnNext(frame -> System.out.println("[Upstream emitted] " + frame))
+                // Buffer up to 5 frames; drop excess and log them
+                .onBackpressureBuffer(
+                        5,
+                        dropped -> System.out.println("[Buffer overflow, dropped] " + dropped)
+                );
+
+        // Slow subscriber: processes 1 frame every 100ms
+        frameFlux
+                .publishOn(Schedulers.boundedElastic()) // subscriber on separate thread
+                .subscribe(
+                        frame -> {
+                            System.out.println("[Subscriber received] " + frame);
+                            try {
+                                Thread.sleep(100); // simulate slow processing
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
+                        },
+                        err -> System.err.println("Error: " + err),
+                        () -> System.out.println("All frames processed!")
+                );
+
+        // Keep main thread alive long enough for processing
+        Thread.sleep(5000);
+    }
+
+    private static void stockPriceTicker() throws InterruptedException {
+
+
+        // Simulate a fast upstream of stock prices
+        Flux<Integer> stockFlux = Flux.range(100, 20) // 100..119
+                .delayElements(Duration.ofMillis(50)) // fast upstream: every 50ms
+                .doOnNext(price -> System.out.println("[Upstream emitted] " + price))
+                // Backpressure strategy: keep only the latest unprocessed item
+                .onBackpressureLatest();
+
+        // Slow subscriber: processes each price every 150ms
+        stockFlux
+                .publishOn(Schedulers.boundedElastic()) // process asynchronously
+                .subscribe(
+                        price -> {
+                            System.out.println("[Subscriber received] " + price);
+                            try {
+                                Thread.sleep(150); // simulate slow processing
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
+                        },
+                        err -> System.err.println("Error: " + err),
+                        () -> System.out.println("All stock prices processed!")
+                );
+
+        // Keep main thread alive for the Flux to finish
+        Thread.sleep(5000);
+    }
+
+    private static void chatMessageLogger() throws InterruptedException {
+
+        // Simulate fast incoming chat messages
+        Flux<String> chatFlux = Flux.range(1, 15)
+                .map(i -> "Message " + i)
+                .delayElements(Duration.ofMillis(50))
+                .doOnNext(message -> System.out.println("[Upstream emitted] " + message))
+                .onBackpressureBuffer(5, dropped -> System.out.println("[Buffer overflow, dropped] " + dropped));
+
+        // Slow subscriber: logs messages every 200ms
+        chatFlux
+                .publishOn(Schedulers.boundedElastic())
+                .subscribe(
+                        msg -> {
+                            System.out.println("[Subscriber received] " + msg);
+                            try {
+                                Thread.sleep(200); // simulate slow logging
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
+                        },
+                        err -> System.err.println("Error: " + err),
+                        () -> System.out.println("All messages processed!")
+                );
+
+        // Keep main thread alive long enough for all processing
+        Thread.sleep(5000);
+
     }
 
     private static void backpressureExample() throws InterruptedException {
