@@ -9,6 +9,7 @@ public class IntermediateProblems {
 
     public static void main(String[] args) throws InterruptedException {
 
+        squaredMono();
         backpressureExample();
         chatMessageLogger();
         stockPriceTicker();
@@ -22,6 +23,11 @@ public class IntermediateProblems {
         flakyApiCalls();
         hotVsCold();
         hotColdNewsFeed();
+    }
+
+    private static void squaredMono() {
+
+        
     }
 
     private static void hotColdNewsFeed() throws InterruptedException {

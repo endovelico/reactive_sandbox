@@ -17,7 +17,8 @@ public class BeginnerProblems {
 
     public static void main(String[] args) throws InterruptedException {
 
-        justOrEmptyExample();
+        //hexConvertor();
+        //justOrEmptyExample();
         //createMonoAndPrintValue();
         //emitsNumbers1to5();
         //filterAndSquareNumbers();
@@ -43,6 +44,15 @@ public class BeginnerProblems {
         //activateLog();
         //limitRateExample();
 
+    }
+
+    private static void hexConvertor() {
+
+        Flux<Integer> numbers = Flux.range(10, 5);
+
+        Flux<String> hexStrings = numbers.map(value -> String.format("0x%02X", value));
+
+        hexStrings.subscribe(System.out::println);
     }
 
     private static void justOrEmptyExample() {
