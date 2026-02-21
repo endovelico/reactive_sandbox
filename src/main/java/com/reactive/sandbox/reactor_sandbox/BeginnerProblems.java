@@ -13,10 +13,16 @@ import java.util.Optional;
 import java.util.Random;
 import java.util.stream.Collectors;
 
+import static com.reactive.sandbox.aux.AuxMethods.fetchData;
+import static com.reactive.sandbox.aux.AuxMethods.parseJson;
+
 public class BeginnerProblems {
 
     public static void main(String[] args) throws InterruptedException {
 
+        doOnErrorDoOnErrorResumeHooks();
+        flatMapMapOnErrorResume();
+        sampleReducer();
         stockPricesGreatherThanThreshold();
         normalZipper();
         //hexConvertor();
@@ -46,6 +52,51 @@ public class BeginnerProblems {
         //activateLog();
         //limitRateExample();
 
+    }
+
+    private static void doOnErrorDoOnErrorResumeHooks() {
+
+        Flux.just(1, 2, 3, 4, 5)
+                .flatMap(number ->
+                        processNumber(number)
+                                .doOnError(e -> {
+                                    // Only print for IllegalArgumentException
+                                    if (e instanceof IllegalArgumentException) {
+                                        System.out.println("Error processing " + number + ": " + e.getMessage());
+                                    }
+                                })
+                                .onErrorResume(e -> Mono.just(-1)) // fallback value -1
+                )
+                .subscribe(System.out::println);
+    }
+
+    private static void flatMapMapOnErrorResume() {
+
+        String fallbackUrl = "fallbackUrl";
+
+        Flux.just("url1", "url2", "url3", "url4")
+                .flatMap(url -> Mono.fromCallable(() -> fetchData(url)) // fetch JSON data
+                        .map(json -> parseJson(json))                     // parse JSON
+                        .onErrorResume(e -> Mono.fromCallable(() -> fetchData(fallbackUrl)) // fallback
+                                .map(json -> parseJson(json))
+                        )
+                )
+                .subscribe(System.out::println);
+
+    }
+
+    private static void sampleReducer() {
+
+        Flux<Double> stockPrices = Flux.just(100.0, 200.0, 300.0, 400.0);
+
+        // Calculate the total sum using reduce
+        stockPrices
+                .reduce(0.0, (total, price) -> total + price)
+                .subscribe(
+                        sum -> System.out.println("Total sum: " + sum),
+                        error -> System.err.println("Error: " + error.getMessage()),
+                        () -> System.out.println("Calculation completed")
+                );
     }
 
     private static void stockPricesGreatherThanThreshold() {

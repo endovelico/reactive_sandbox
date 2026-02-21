@@ -7,6 +7,7 @@ import reactor.core.scheduler.Schedulers;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Random;
 
 public class AuxMethods {
 
@@ -53,5 +54,36 @@ public class AuxMethods {
         int c = stockSymbol.charAt(0);
         return Mono.just(c * 10.0)
                 .delayElement(Duration.ofMillis(935 + c)); // variable delay
+    }
+
+    public static List<String> simulateApiCall() {
+        List<String> userNames = Arrays.asList("Alice", "Bob", "Carol", "David");
+        Random random = new Random();
+        if (random.nextBoolean()) {
+            throw new RuntimeException("Remote API error");
+        }
+        return userNames;
+    }
+
+    public static String fetchData(String url) {
+        // Simulates fetching JSON data from the URL
+        return "{\"data\": \"" + url + "\"}";
+    }
+
+    public static String parseJson(String jsonString) {
+        // Simulates parsing JSON and throwing an exception for invalid JSON
+        if (jsonString.contains("url3")) {
+            throw new RuntimeException("Invalid JSON");
+        }
+        return jsonString.toUpperCase();
+    }
+
+
+    public static Mono<Integer> processNumber(int number) {
+        int doubled = number * 2;
+        if (doubled % 4 == 0)
+            return Mono.error(new IllegalArgumentException("Result is divisible by 4"));
+        else
+            return Mono.just(doubled);
     }
 }

@@ -1,17 +1,27 @@
 package com.reactive.sandbox.reactor_sandbox;
 
 import com.reactive.sandbox.aux.AuxMethods;
+import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
 import java.time.Duration;
+import java.util.Arrays;
+import java.util.List;
+
+import static com.reactive.sandbox.aux.AuxMethods.*;
 
 public class IntermediateProblems {
 
     public static void main(String[] args) throws InterruptedException {
 
-        switchIfEmpty();
+        propagateExample();
+        flatMapOnErrorResume();
+        reactorTryCatchFinally();
+        simulateAPICall();
+        //hookStuff();
+        //switchIfEmpty();
         //flatFlatMapFlux();
         /*iterableSquared();
         AnotherFlatMapSquared();
@@ -29,6 +39,90 @@ public class IntermediateProblems {
         flakyApiCalls();
         hotVsCold();
         hotColdNewsFeed();*/
+    }
+
+    private static void propagateExample() {
+
+        Flux<String> stringFlux = Flux.just("1", "2", "three", "4", "5");
+
+        stringFlux.map(stringNumber -> {
+                    try {
+                        // Try parsing the string into an integer
+                        return Integer.parseInt(stringNumber);
+                    } catch (NumberFormatException e) {
+                        // Propagate the exception as a RuntimeException
+                        throw Exceptions.propagate(e);
+                    }
+                })
+                .subscribe(
+                        number -> System.out.println("Parsed: " + number),
+                        error -> System.out.println("Error: " + error.getMessage())
+                );
+    }
+
+    private static void flatMapOnErrorResume() {
+
+        String fallbackUrl = "fallbackUrl";
+
+        Flux.just("url1", "url2", "url3", "url4")
+                .flatMap(url -> Mono.fromCallable(() -> fetchData(url)) // fetch JSON data
+                        .map(json -> parseJson(json))                     // parse JSON
+                        .onErrorResume(e -> Mono.fromCallable(() -> fetchData(fallbackUrl)) // fallback
+                                .map(json -> parseJson(json))
+                        )
+                )
+                .subscribe(System.out::println);
+    }
+
+    private static void reactorTryCatchFinally() {
+
+        List<Integer> inputList = Arrays.asList(1, 2, -3, 4);
+
+        Flux<Integer> numbersFlux = Flux.fromIterable(inputList)
+                .map(num -> {
+                    // Equivalent of the try block logic
+                    if (num < 0) {
+                        throw new IllegalArgumentException("Negative numbers are not allowed.");
+                    }
+                    return num * 2;
+                })
+                .doOnError(e -> {
+                    // Equivalent of the catch block
+                    System.out.println("Error: " + e.getMessage());
+                })
+                .doFinally(signal -> {
+                    // Equivalent of the finally block
+                    System.out.println("Finished processing the list.");
+                });
+
+        // Subscribe to print the doubled numbers
+        numbersFlux.subscribe(
+                value -> System.out.println(value),
+                error -> {
+                    // Empty error consumer so that the exception stack trace is not printed again
+                }
+        );
+    }
+
+    private static void simulateAPICall() {
+
+    }
+
+    private static void hookStuff() {
+
+        Flux<Double> stockPrices = Flux.just(120.0, 140.0, 130.0, 110.0, 150.0);
+
+        stockPrices
+                // Print when the subscription starts
+                .doOnSubscribe(subscription -> System.out.println("Subscription started."))
+                // Print before the first item is emitted
+                .doFirst(() -> System.out.println("First stock price incoming..."))
+                // Print each price
+                .doOnNext(price -> System.out.println("Price: " + price))
+                // Print when the Flux completes
+                .doOnComplete(() -> System.out.println("All stock prices processed."))
+                // Subscribe to trigger the pipeline
+                .subscribe();
     }
 
     private static void switchIfEmpty() {
