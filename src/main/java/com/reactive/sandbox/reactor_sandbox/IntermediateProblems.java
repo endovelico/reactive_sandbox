@@ -1,6 +1,8 @@
 package com.reactive.sandbox.reactor_sandbox;
 
+import com.reactive.sandbox.aux.AuxMethods;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
 import java.time.Duration;
@@ -9,6 +11,8 @@ public class IntermediateProblems {
 
     public static void main(String[] args) throws InterruptedException {
 
+        iterableSquared();
+        /*AnotherFlatMapSquared();
         squaredMono();
         backpressureExample();
         chatMessageLogger();
@@ -22,12 +26,43 @@ public class IntermediateProblems {
         errorContinueExample();
         flakyApiCalls();
         hotVsCold();
-        hotColdNewsFeed();
+        hotColdNewsFeed();*/
+    }
+
+    private static void iterableSquared() {
+
+        // Create a Flux emitting numbers from 1 to 5
+        Flux<Integer> numbersFlux = Flux.range(1, 5);
+
+        // Transform each number using flatMapIterable to get number and its square
+        Flux<Integer> resultFlux = numbersFlux.flatMapIterable(AuxMethods::getNumberAndSquareIterable);
+
+        // Subscribe and print each emitted item
+        resultFlux.subscribe(System.out::println);
+    }
+
+    private static void AnotherFlatMapSquared() {
+
+        // Step 2: Create a Flux emitting numbers from 1 to 5
+        Flux<Integer> numbersFlux = Flux.range(1, 5);
+
+        // Step 4: Transform each emitted value to its number and square
+        Flux<Integer> resultFlux = numbersFlux.flatMap(AuxMethods::getNumberAndSquare);
+
+        // Subscribe and print each emitted item
+        resultFlux.subscribe(System.out::println);
     }
 
     private static void squaredMono() {
 
-        
+        Mono<Integer> monoValue = Mono.just(5);
+
+        // Step 4: Transform the emitted value asynchronously
+        Mono<Integer> squaredMono = monoValue.flatMap(AuxMethods::getSquareAsync);
+
+        // Step 5: Subscribe and print the result
+        squaredMono.subscribe(result -> System.out.println("Squared value: " + result));
+
     }
 
     private static void hotColdNewsFeed() throws InterruptedException {
