@@ -21,6 +21,42 @@ public class IntermediateProblems {
         errorContinueExample();
         flakyApiCalls();
         hotVsCold();
+        hotColdNewsFeed();
+    }
+
+    private static void hotColdNewsFeed() throws InterruptedException {
+
+        System.out.println("=== Cold News Feed ===");
+
+        Flux<String> coldFeed = Flux.interval(Duration.ofMillis(300))
+                .take(5)
+                .map(i -> "Headline " + (i + 1));
+
+        // Subscriber A subscribes immediately
+        coldFeed.subscribe(h -> System.out.println("[Cold Subscriber A] Received: " + h));
+
+        // Subscriber B subscribes 900ms later
+        Thread.sleep(900);
+        coldFeed.subscribe(h -> System.out.println("[Cold Subscriber B] Received: " + h));
+
+        Thread.sleep(1500); // wait for cold feed to finish
+
+        System.out.println("\n=== Hot News Feed ===");
+
+        Flux<String> hotFeed = Flux.interval(Duration.ofMillis(300))
+                .take(5)
+                .map(i -> "Headline " + (i + 1))
+                .publish()
+                .refCount(1); // make it hot
+
+        // Subscriber C subscribes immediately
+        hotFeed.subscribe(h -> System.out.println("[Hot Subscriber C] Received: " + h));
+
+        // Subscriber D subscribes 900ms later
+        Thread.sleep(900);
+        hotFeed.subscribe(h -> System.out.println("[Hot Subscriber D] Received: " + h));
+
+        Thread.sleep(1500); // wait for hot feed to finish
     }
 
     private static void hotVsCold() throws InterruptedException {

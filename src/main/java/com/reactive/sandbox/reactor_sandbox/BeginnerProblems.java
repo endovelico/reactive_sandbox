@@ -9,6 +9,7 @@ import reactor.core.publisher.Mono;
 import reactor.util.function.Tuple3;
 
 import java.time.Duration;
+import java.util.Optional;
 import java.util.Random;
 import java.util.stream.Collectors;
 
@@ -16,31 +17,53 @@ public class BeginnerProblems {
 
     public static void main(String[] args) throws InterruptedException {
 
-        createMonoAndPrintValue();
-        emitsNumbers1to5();
-        filterAndSquareNumbers();
-        transformeNameWithFlatMap();
-        asyncTransformationWithOrderDifference();
-        filterAndTransformStrings();
-        addGreetingToListOfName();
-        greetingWithMultipleFluxes();
-        zipTwoFluxes();
-        zipThreeFluxes();
-        combineFastAndSlow();
-        firstMatchAndGlobalAggregation();
-        divergingTransformations();
-        collectIntoAList();
-        collectIntoASet();
-        collectSumAndCount();
-        countAndSumInOnePass();
-        minAndMaxInOnePass();
-        sumCountAndProduct();
-        sumCountAverage();
-        executeASideEffect();
-        executeAsSubscription();
-        activateLog();
-        limitRateExample();
+        justOrEmptyExample();
+        //createMonoAndPrintValue();
+        //emitsNumbers1to5();
+        //filterAndSquareNumbers();
+        //transformeNameWithFlatMap();
+        //asyncTransformationWithOrderDifference();
+        //filterAndTransformStrings();
+        //addGreetingToListOfName();
+        //greetingWithMultipleFluxes();
+        //zipTwoFluxes();
+        //zipThreeFluxes();
+        //combineFastAndSlow();
+        //firstMatchAndGlobalAggregation();
+        //divergingTransformations();
+        //collectIntoAList();
+        //collectIntoASet();
+        //collectSumAndCount();
+        //countAndSumInOnePass();
+        //minAndMaxInOnePass();
+        //sumCountAndProduct();
+        //sumCountAverage();
+        //executeASideEffect();
+        //executeAsSubscription();
+        //activateLog();
+        //limitRateExample();
 
+    }
+
+    private static void justOrEmptyExample() {
+
+        Optional<String> optionalWithValue = Optional.of("Sean Strickland");
+        Optional<String> emptyOptional = Optional.empty();
+
+        Mono<String> monoWithValue = Mono.justOrEmpty(optionalWithValue);
+        Mono<String> monoEmpty = Mono.justOrEmpty(emptyOptional);
+
+        monoWithValue.subscribe(
+                element -> System.out.println("Mono with value - Value: " + element),
+                error -> System.err.println("Mono with value - Error: " + error.getMessage()),
+                () -> System.out.println("Mono with value complete")
+        );
+
+        monoEmpty.subscribe(
+                element -> System.out.println("Mono empty - Value: " + element),
+                error -> System.err.println("Mono empty - Error: " + error.getMessage()),
+                () -> System.out.println("Mono empty complete")
+        );
     }
 
     private static void limitRateExample() throws InterruptedException {
