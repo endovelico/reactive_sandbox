@@ -17,6 +17,8 @@ public class BeginnerProblems {
 
     public static void main(String[] args) throws InterruptedException {
 
+        stockPricesGreatherThanThreshold();
+        normalZipper();
         //hexConvertor();
         //justOrEmptyExample();
         //createMonoAndPrintValue();
@@ -44,6 +46,32 @@ public class BeginnerProblems {
         //activateLog();
         //limitRateExample();
 
+    }
+
+    private static void stockPricesGreatherThanThreshold() {
+
+        Flux<Double> stockPrices = Flux.just(120.0, 140.0, 130.0, 110.0, 150.0);
+        double threshold = 200.0;
+
+        // Filter prices greater than the threshold
+        Flux<Double> filteredStockPrices = stockPrices
+                .filter(price -> price > threshold);
+
+        filteredStockPrices.subscribe(
+                value -> System.out.println("Filtered value: " + value),
+                error -> System.err.println("Error: " + error.getMessage()),
+                () -> System.out.println("Filtering completed")
+        );
+    }
+
+    private static void normalZipper() {
+
+        Flux<String> stockSymbols = Flux.just("AAPL", "GOOG", "MSFT", "AMZN", "FB");
+        Flux<String> marketNames = Flux.just("NASDAQ", "NASDAQ", "NASDAQ", "NASDAQ", "NASDAQ");
+
+        // Combine elements using Flux.zip
+        Flux.zip(stockSymbols, marketNames, (symbol, market) -> symbol + " - " + market)
+                .subscribe(System.out::println);
     }
 
     private static void hexConvertor() {

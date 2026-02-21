@@ -1,5 +1,6 @@
 package com.reactive.sandbox.reactor_sandbox;
 
+import com.reactive.sandbox.aux.AuxMethods;
 import com.reactive.sandbox.aux.CustomBaseSubscriber;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
@@ -7,22 +8,60 @@ import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import reactor.util.context.Context;
 
+import java.time.Duration;
+import java.util.List;
+import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
 import static com.reactive.sandbox.aux.AdvancedUtils.createCompletableFuture;
 import static com.reactive.sandbox.aux.AdvancedUtils.createPublisherSupplier;
+import static com.reactive.sandbox.aux.AuxMethods.fetchLatestPrice;
 
 public class AdvancedProblems {
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws InterruptedException {
 
+        latestStockStuff();
+        historicalPriceData();
         processingWithContext();
         createAPublisherPartExample();
         completableFutureToFlux();
         supplierWithDefer();
         emitSimpleFlux();
         baseSubscriberExample();
+    }
+
+    private static void latestStockStuff() throws InterruptedException {
+
+        Flux<String> stockSymbols = Flux.just("AAPL", "GOOG", "MSFT", "AMZN", "FB")
+                .delayElements(Duration.ofSeconds(1));
+
+        stockSymbols
+                // switchMap cancels the previous API call if a new symbol is emitted
+                .switchMap(symbol ->
+                        fetchLatestPrice(symbol)
+                                .map(price -> symbol + " -> " + price)
+                )
+                .subscribe(System.out::println);
+
+        // Keep the app alive to see all emissions
+        Thread.sleep(15000);
+
+    }
+
+    private static void historicalPriceData() throws InterruptedException {
+
+        List<String> stockSymbols = (List<String>) Arrays.asList("AAPL", "GOOG", "MSFT", "AMZN", "FB");
+
+        // Create a Flux from the stockSymbols list
+        Flux.fromIterable(stockSymbols)
+                        .concatMap(symbol ->
+                                AuxMethods.fetchHistoricalPrices(symbol).map(prices -> symbol + " -> " + prices))
+                .subscribe(System.out::println);
+
+
+        Thread.sleep(5500);
     }
 
     private static void baseSubscriberExample() {

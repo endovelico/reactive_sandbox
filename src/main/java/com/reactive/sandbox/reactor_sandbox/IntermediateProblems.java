@@ -11,8 +11,10 @@ public class IntermediateProblems {
 
     public static void main(String[] args) throws InterruptedException {
 
-        iterableSquared();
-        /*AnotherFlatMapSquared();
+        switchIfEmpty();
+        //flatFlatMapFlux();
+        /*iterableSquared();
+        AnotherFlatMapSquared();
         squaredMono();
         backpressureExample();
         chatMessageLogger();
@@ -27,6 +29,37 @@ public class IntermediateProblems {
         flakyApiCalls();
         hotVsCold();
         hotColdNewsFeed();*/
+    }
+
+    private static void switchIfEmpty() {
+
+        Flux<String> stockSymbols = Flux.empty(); // Empty Flux
+        Flux<String> defaultSymbols = Flux.just("AAPL", "GOOG", "MSFT", "AMZN", "FB");
+
+        // Use defaultSymbols if stockSymbols is empty
+        Flux<String> result = stockSymbols.switchIfEmpty(defaultSymbols);
+
+        // Subscribe and print each item
+        result.subscribe(
+                symbol -> System.out.println("Symbol: " + symbol),
+                error -> System.err.println("Error: " + error.getMessage()),
+                () -> System.out.println("Completed")
+        );
+    }
+
+    private static void flatFlatMapFlux() {
+
+        // Step 2: Create a Flux emitting numbers from 1 to 5
+        Flux<Integer> numbersFlux = Flux.range(1, 5);
+
+        // Step 3: Use map to triple each emitted value
+        Flux<Integer> tripledFlux = numbersFlux.map(value -> value * 3);
+
+        // Step 4: Use flatMap to emit the tripled value and its square
+        Flux<Integer> resultFlux = tripledFlux.flatMap(AuxMethods::getValueAndSquare);
+
+        // Step 5: Subscribe and print each emitted item
+        resultFlux.subscribe(System.out::println);
     }
 
     private static void iterableSquared() {
