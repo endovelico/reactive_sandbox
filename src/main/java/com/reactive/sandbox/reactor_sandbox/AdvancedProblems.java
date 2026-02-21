@@ -22,6 +22,8 @@ public class AdvancedProblems {
 
     public static void main(String[] args) throws InterruptedException {
 
+        slowPublisherBoundedElastic();
+        webScrapperProblem();
         latestStockStuff();
         historicalPriceData();
         processingWithContext();
@@ -30,6 +32,42 @@ public class AdvancedProblems {
         supplierWithDefer();
         emitSimpleFlux();
         baseSubscriberExample();
+    }
+
+    private static void slowPublisherBoundedElastic() {
+
+        // Call slowPublisher and use subscribeOn with a custom boundedElastic scheduler
+        Flux<Integer> processedFlux = slowPublisher()
+                .subscribeOn(Schedulers.newBoundedElastic(
+                        2,      // threadCap
+                        2,      // queuedTaskCap
+                        "bounded-elastic", // name
+                        30,     // ttlSeconds
+                        true    // daemon
+                ));
+
+        // Subscribe using fastConsumer
+        processedFlux.subscribe(AuxMethods::fastConsumer);
+
+        Thread.sleep(11000); // Keep JVM alive to allow async processing
+    }
+
+
+    private static void webScrapperProblem() throws InterruptedException {
+
+        Flux<String> urlFlux = Flux.just("url1", "url2", "url3", "url4");
+
+        // Change the threading context and apply fetchAndCountWords
+        Flux<Integer> wordCountFlux = urlFlux
+                .publishOn(Schedulers.boundedElastic())
+                .map(AuxMethods::fetchAndCountWords);
+
+        // Subscribe and print emitted elements
+        wordCountFlux.subscribe(wordCount ->
+                System.out.println("Word count: " + wordCount)
+        );
+
+        Thread.sleep(4000);
     }
 
     private static void latestStockStuff() throws InterruptedException {

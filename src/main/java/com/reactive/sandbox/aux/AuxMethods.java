@@ -11,6 +11,26 @@ import java.util.Random;
 
 public class AuxMethods {
 
+
+    private static Flux<Integer> slowPublisher() {
+        return Flux.create(sink -> {
+            for (int i = 1; i <= 10; i++) {
+                try {
+                    // Simulate blocking IO with a 1-second delay
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                sink.next(i);
+            }
+            sink.complete();
+        });
+    }
+
+    public static void fastConsumer(Integer value) {
+        System.out.println("Received: " + value);
+    }
+
     public static boolean isPrime(int n) {
         if (n <= 1) return false;
 
@@ -85,5 +105,22 @@ public class AuxMethods {
             return Mono.error(new IllegalArgumentException("Result is divisible by 4"));
         else
             return Mono.just(doubled);
+    }
+
+    public static int fetchAndCountWords(String url) {
+        int random = (int)(Math.random() * 500 + 100);
+        System.out.println("Word count for " + url + ": " + random);
+        return random;
+    }
+
+
+    public static Integer slowConsumer(Integer value) {
+        try {
+            // Simulate a slow consumer by adding a 1-second delay
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        return value;
     }
 }

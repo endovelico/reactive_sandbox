@@ -16,6 +16,7 @@ public class IntermediateProblems {
 
     public static void main(String[] args) throws InterruptedException {
 
+        publishOnSlowconsumer();
         propagateExample();
         flatMapOnErrorResume();
         reactorTryCatchFinally();
@@ -39,6 +40,23 @@ public class IntermediateProblems {
         flakyApiCalls();
         hotVsCold();
         hotColdNewsFeed();*/
+    }
+
+    private static void publishOnSlowconsumer() throws InterruptedException {
+
+        Flux<Integer> fastPublisher = Flux.range(1, 5);
+
+        // Change the threading context and apply the slowConsumer method
+        Flux<Integer> processedFlux = fastPublisher
+                .publishOn(Schedulers.single())
+                .map(AuxMethods::slowConsumer);
+
+        // Subscribe and print the emitted elements
+        processedFlux.subscribe(value ->
+                System.out.println("Processed value: " + value)
+        );
+
+        Thread.sleep(15000);
     }
 
     private static void propagateExample() {
