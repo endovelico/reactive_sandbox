@@ -12,17 +12,23 @@ import reactor.util.context.Context;
 import java.time.Duration;
 import java.util.List;
 import java.util.Arrays;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 import static com.reactive.sandbox.aux.AdvancedUtils.createCompletableFuture;
 import static com.reactive.sandbox.aux.AdvancedUtils.createPublisherSupplier;
 import static com.reactive.sandbox.aux.AuxMethods.fetchLatestPrice;
+import static com.reactive.sandbox.aux.AuxMethods.fetchUrlContent;
 
 public class AdvancedProblems {
 
     public static void main(String[] args) throws InterruptedException {
 
+        blockingNumberThree();
+        blockingNumberTwo();
+        blockingCallNumberOne();
         yetAnotherContext();
         anotherContextWrite();
         transformedDefferedcontextual();
@@ -38,6 +44,55 @@ public class AdvancedProblems {
         supplierWithDefer();
         emitSimpleFlux();
         baseSubscriberExample();
+    }
+
+    private static void blockingNumberThree() {
+        // Create a Mono from the blockingOperation method
+        Mono<String> blockingMono = Mono.fromCallable(AuxMethods::blockingOperation)
+                // Run blocking code on boundedElastic scheduler
+                .subscribeOn(Schedulers.boundedElastic());
+
+        // Subscribe and print the emitted value
+        blockingMono.subscribe(result ->
+                System.out.println("Result: " + result)
+        );
+
+        // Keep JVM alive to allow async execution to complete
+        Thread.sleep(4000);
+    }
+
+    private static void blockingNumberTwo() {
+
+        // Generate a Flux from 1 to 10
+        Flux<Integer> numberFlux = Flux.range(1, 10);
+
+        // Transform the Flux into a lazy blocking Stream
+        Stream<Integer> numberStream = numberFlux.toStream();
+
+        // Iterate over the stream and print elements
+        numberStream.forEach(number ->
+                System.out.println("Value: " + number)
+        );
+    }
+
+    private static void blockingCallNumberOne() {
+
+        String url = "https://example.com";
+
+        // Create a Mono from fetchUrlContent
+        Mono<String> contentMono = fetchUrlContent(url);
+
+        // Set timeout duration
+        Duration timeout = Duration.ofSeconds(5);
+
+        // Get Optional using timeout
+        Optional<String> contentOptional = contentMono.blockOptional(timeout);
+
+        // Handle the result
+        contentOptional.ifPresentOrElse(
+                content -> System.out.println("URL content: " + content),
+                () -> System.out.println("The Mono completed empty.")
+        );
     }
 
     private static void yetAnotherContext() {
@@ -61,7 +116,7 @@ public class AdvancedProblems {
         contextualizedGreetingMono
                 .contextWrite(context -> context.put(key, "Bob"))
                 .subscribe(result -> System.out.println("Result: " + result));
-            
+
     }
 
     private static void anotherContextWrite() {

@@ -3,6 +3,7 @@ package com.reactive.sandbox.aux;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
+import reactor.netty.http.client.HttpClient;
 
 import java.time.Duration;
 import java.util.Arrays;
@@ -11,6 +12,25 @@ import java.util.Random;
 
 public class AuxMethods {
 
+    public static String blockingOperation() {
+        try {
+            // Simulate a blocking operation
+            Thread.sleep(3000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        return "Blocking operation completed";
+    }
+
+    public static Mono<String> fetchUrlContent(String url) {
+        HttpClient httpClient = HttpClient.create();
+
+        return httpClient.get()
+                .uri(url)
+                .responseSingle((response, content) ->
+                        content.asString()
+                );
+    }
 
     public static Integer processingFunction(Integer value) {
         try {
