@@ -46,7 +46,7 @@ public class AdvancedProblems {
         baseSubscriberExample();
     }
 
-    private static void blockingNumberThree() {
+    private static void blockingNumberThree() throws InterruptedException {
         // Create a Mono from the blockingOperation method
         Mono<String> blockingMono = Mono.fromCallable(AuxMethods::blockingOperation)
                 // Run blocking code on boundedElastic scheduler
