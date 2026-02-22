@@ -12,7 +12,17 @@ import java.util.Random;
 public class AuxMethods {
 
 
-    private static Flux<Integer> slowPublisher() {
+    public static Integer processingFunction(Integer value) {
+        try {
+            // Simulate a task with a 500ms delay
+            Thread.sleep(500);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        return value * 2;
+    }
+
+    public static Flux<Integer> slowPublisher() {
         return Flux.create(sink -> {
             for (int i = 1; i <= 10; i++) {
                 try {

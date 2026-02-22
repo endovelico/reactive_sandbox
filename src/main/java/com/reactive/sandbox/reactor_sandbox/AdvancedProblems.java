@@ -5,6 +5,7 @@ import com.reactive.sandbox.aux.CustomBaseSubscriber;
 import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.ParallelFlux;
 import reactor.core.scheduler.Schedulers;
 import reactor.util.context.Context;
 
@@ -22,6 +23,11 @@ public class AdvancedProblems {
 
     public static void main(String[] args) throws InterruptedException {
 
+        yetAnotherContext();
+        anotherContextWrite();
+        transformedDefferedcontextual();
+        paralel4rails();
+        paralelSchedudlersingleExample();
         slowPublisherBoundedElastic();
         webScrapperProblem();
         latestStockStuff();
@@ -34,10 +40,115 @@ public class AdvancedProblems {
         baseSubscriberExample();
     }
 
-    private static void slowPublisherBoundedElastic() {
+    private static void yetAnotherContext() {
+        Mono<String> greetingMono = Mono.just("Hello");
+        String key = "username";
+
+        // Append the value of "username" from the context
+        Mono<String> contextualizedGreetingMono =
+                greetingMono.transformDeferredContextual((mono, contextView) ->
+                        mono.map(greeting ->
+                                greeting + " " + contextView.getOrDefault(key, "Guest")
+                        )
+                );
+
+        // Add "Alice" to the Context and subscribe
+        contextualizedGreetingMono
+                .contextWrite(context -> context.put(key, "Alice"))
+                .subscribe(result -> System.out.println("Result: " + result));
+
+        // Add "Bob" to the Context and subscribe again
+        contextualizedGreetingMono
+                .contextWrite(context -> context.put(key, "Bob"))
+                .subscribe(result -> System.out.println("Result: " + result));
+            
+    }
+
+    private static void anotherContextWrite() {
+
+        Flux<Integer> numbers = Flux.range(1, 5);
+        String key = "multiplier";
+        int value = 3;
+        int defaultValue = 1;
+
+        // Multiply each emitted number by the "multiplier" value from the context
+        Flux<Integer> contextualizedNumbers = numbers
+                .flatMap(number ->
+                        Mono.deferContextual(contextView -> {
+                            int multiplier = contextView.getOrDefault(key, defaultValue);
+                            return Mono.just(number * multiplier);
+                        })
+                )
+                // Enrich the Context with key-value pair
+                .contextWrite(context -> context.put(key, value));
+
+        // Subscribe and print emitted values
+        contextualizedNumbers.subscribe(result ->
+                System.out.println("Result: " + result)
+        );
+    }
+
+    private static void transformedDefferedcontextual() {
+
+        Flux<Integer> numbers = Flux.range(1, 5);
+        String key = "divider";
+        double value = 10.0;
+        double defaultValue = 1.0;
+
+        // Divide each emitted number by the "divider" value from the context
+        Flux<Double> contextualizedNumbers = numbers
+                .transformDeferredContextual((flux, ctxView) ->
+                        flux.map(n -> n / ctxView.getOrDefault(key, defaultValue))
+                )
+                // Add key-value pair to the context
+                .contextWrite(Context.of(key, value));
+
+        // Subscribe and print the emitted values
+        contextualizedNumbers.subscribe(result ->
+                System.out.println("Result: " + result)
+        );
+    }
+
+    private static void paralel4rails() throws InterruptedException {
+
+        Flux<Integer> fluxRange = Flux.range(1, 10);
+
+        // Create a ParallelFlux with 4 rails, run in parallel, and apply processingFunction
+        ParallelFlux<Integer> parallelFlux = fluxRange
+                .parallel(4)                     // Split into 4 rails
+                .runOn(Schedulers.parallel())    // Process rails in parallel
+                .map(AuxMethods::processingFunction);
+
+        // Subscribe to the ParallelFlux (prints items as they are processed)
+        parallelFlux.subscribe(value -> System.out.println("Received: " + value));
+
+        Thread.sleep(10000); // Keep JVM alive for async processing
+    }
+
+    private static void paralelSchedudlersingleExample() throws InterruptedException {
+
+        Flux<Integer> fluxRange = Flux.range(1, 10);
+
+        // Use a parallel scheduler to process items, then change threading context for subscribing
+        Flux<Integer> processedFlux = fluxRange
+                .parallel() // Split processing across multiple threads
+                .runOn(Schedulers.parallel()) // Process in parallel
+                .map(AuxMethods::processingFunction)
+                .sequential() // Merge back into a single Flux
+                .publishOn(Schedulers.single()); // Subscribe on single thread
+
+        // Subscribe and print processed values
+        processedFlux.subscribe(value ->
+                System.out.println("Received: " + value)
+        );
+
+        Thread.sleep(11000); // Keep JVM alive for async processing
+    }
+
+    private static void slowPublisherBoundedElastic() throws InterruptedException {
 
         // Call slowPublisher and use subscribeOn with a custom boundedElastic scheduler
-        Flux<Integer> processedFlux = slowPublisher()
+        Flux<Integer> processedFlux = AuxMethods.slowPublisher()
                 .subscribeOn(Schedulers.newBoundedElastic(
                         2,      // threadCap
                         2,      // queuedTaskCap
